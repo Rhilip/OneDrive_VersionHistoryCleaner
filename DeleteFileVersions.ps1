@@ -1,18 +1,17 @@
-﻿function Get-sPOFolderFiles
-{
+﻿function Get-sPOFolderFiles {
   param(
-    [Parameter(Mandatory = $true,Position = 1)]
+    [Parameter(Mandatory = $true, Position = 1)]
     [string]$Username,
-    [Parameter(Mandatory = $true,Position = 2)]
+    [Parameter(Mandatory = $true, Position = 2)]
     [string]$Url,
-    [Parameter(Mandatory = $true,Position = 3)]
-    $password,
-    [Parameter(Mandatory = $true,Position = 4)]
+    [Parameter(Mandatory = $true, Position = 3)]
+    [securestring]$password,
+    [Parameter(Mandatory = $true, Position = 4)]
     [string]$ListTitle
   )
 
   $ctx = New-Object Microsoft.SharePoint.Client.ClientContext ($Url)
-  $ctx.Credentials = New-Object Microsoft.SharePoint.Client.SharePointOnlineCredentials ($Username,$password)
+  $ctx.Credentials = New-Object Microsoft.SharePoint.Client.SharePointOnlineCredentials ($Username, $password)
   $ctx.Load($ctx.Web)
   $ctx.ExecuteQuery()
   $ll = $ctx.Web.Lists.GetByTitle($ListTitle)
@@ -26,37 +25,26 @@
     $ctx.Load($itemki)
     $ctx.ExecuteQuery()
 
-    foreach ($item in $itemki)
-    {
-
-      Write-Host $item["FileRef"]
-      $file =
-      $ctx.Web.GetFileByServerRelativeUrl($item["FileRef"]);
+    foreach ($item in $itemki) {
+      if ($item.FileSystemObjectType -eq 'Folder') {
+        continue
+      }
+      $file = $ctx.Web.GetFileByServerRelativeUrl($item["FileRef"]);
       $ctx.Load($file)
       $ctx.Load($file.Versions)
       $ctx.ExecuteQuery()
-      if ($file.Versions.Count -eq 0)
-      {
-        $obj = New-Object PSObject
-        $obj | Add-Member NoteProperty ServerRelativeUrl ($file.ServerRelativeUrl)
-        $obj | Add-Member NoteProperty FileLeafRef ($item["FileLeafRef"])
-        $obj | Add-Member NoteProperty Versions ("No Versions Available")
+      if ($file.Versions.Count -eq 0) {
+        Write-Host "0 Versions (Passed)" $item["FileRef"]
       }
-      else
-      {
+      else {
         $file.Versions.DeleteAll()
 
-        try { $ctx.ExecuteQuery()
-          $obj = New-Object PSObject
-          $obj | Add-Member NoteProperty ServerRelativeUrl ($file.ServerRelativeUrl)
-          $obj | Add-Member NoteProperty FileLeafRef ($item["FileLeafRef"])
-          $obj | Add-Member NoteProperty Versions ($file.Versions.Count + " versions were deleted")
+        try { 
+          $ctx.ExecuteQuery()
+          Write-Host $file.Versions.Count " Versions (Delete)" $item["FileRef"]
         }
         catch {
-          $obj = New-Object PSObject
-          $obj | Add-Member NoteProperty ServerRelativeUrl ($file.ServerRelativeUrl)
-          $obj | Add-Member NoteProperty FileLeafRef ($item["FileLeafRef"])
-          $obj | Add-Member NoteProperty Versions ($file.Versions.Count + " versions. Failed to delete")
+          Write-Host $file.Versions.Count " Versions (Failed)" $item["FileRef"]
         }
       }
     }
@@ -76,6 +64,6 @@ $AdminPassword = ConvertTo-SecureString -String "TODO_PASSWORD" -AsPlainText -Fo
 #$AdminPassword=Read-Host -Prompt "Enter password" -AsSecureString
 
 #$ListTitle = "文档"
-$ListTitle="Documents"
+$ListTitle = "Documents"
 
 Get-sPOFolderFiles -UserName $username -Url $Url -password $AdminPassword -ListTitle $ListTitle
