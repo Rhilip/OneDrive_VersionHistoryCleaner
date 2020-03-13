@@ -41,10 +41,10 @@
 
         try { 
           $ctx.ExecuteQuery()
-          Write-Host $file.Versions.Count " Versions (Delete)" $item["FileRef"]
+          Write-Host $file.Versions.Count "Versions (Delete)" $item["FileRef"] -ForegroundColor Green
         }
         catch {
-          Write-Host $file.Versions.Count " Versions (Failed)" $item["FileRef"]
+          Write-Host $file.Versions.Count "Versions (Failed)" $item["FileRef"] -ForegroundColor Red
         }
       }
     }
